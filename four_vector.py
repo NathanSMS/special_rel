@@ -1,8 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from math import sqrt, pow
-
-C = 299_792_458  # Speed of light in meters per second
+from typing import ClassVar
 
 @dataclass(frozen=True)
 class FourVector:
@@ -10,9 +9,14 @@ class FourVector:
     x: float
     y: float
     z: float
+    C: ClassVar[int] = 299_792_458  # Speed of light in meters per second
 
-    @staticmethod
-    def LorentzFactor(vx: float, vy: float=0, vz: float=0, c: float=C) -> float:
+    @classmethod
+    def set_speed_of_light(cls, speed_of_light: float):
+        cls.C = float(speed_of_light)  # Make sure C is a float for algebra
+
+    @classmethod
+    def LorentzFactor(cls, vx: float, vy: float=0, vz: float=0) -> float:
         """Calculates the lorentz factor for a frame moving at velocity (vx, vy, vz) with respect to the current frame
 
         Args:
@@ -25,7 +29,7 @@ class FourVector:
             float: _description_
         """
         # Gamma = 1/sqrt(1-v^2/c^2)
-        beta_squared = (vx**2 + vy**2 + vz**2)/C**2
+        beta_squared = (vx**2 + vy**2 + vz**2)/cls.C**2
         if beta_squared >= 1:
             raise ValueError('Magnitude of spatial velocity cannot equal or exceed the speed of light')
         radicand = 1 - beta_squared 
@@ -45,7 +49,7 @@ class FourVector:
         """
         # dU/dTau = dt/dTau * dU/dt = gamma*[ct, vx, vy, vz]
         gamma = cls.LorentzFactor(vx, vy, vz)
-        u_ct = gamma*C
+        u_ct = gamma
         u_x = gamma*vx
         u_y = gamma*vy
         u_z = gamma*vz
@@ -89,6 +93,17 @@ class FourVector:
             return FourVector(self.ct*other, self.x*other, self.y*other, self.z*other)
         else:
             return NotImplemented
+        
+    def __mul__(self, other: float|int) -> FourVector:
+        """Returns four vector which is self scaled by other
+
+        Args:
+            other (float | int): Scalar to multiply four vector by
+
+        Returns:
+            FourVector: result of scalar multiplication other*self
+        """
+        return self.__rmul__(other)
     
     def dot(self, other: FourVector) -> float:
         """Calculates dor product between self and other using Minkowski metric and mostly minuses convention
@@ -128,12 +143,15 @@ class FourVector:
             FourVector: element-wise subtraction of other from self
         """
         return self + -1*other
+    
+    def __repr__(self):
+        return f'ct: {self.ct:>6f}, x: {self.x:>6f}, y: {self.y:>6f}, z: {self.z:>6f}'
 
 def main() -> None:
-    test1 = FourVector.fourVel_from_spatialVel(vx = 0.1*C, vy=0.1*C, vz=0.1*C)
+    FourVector.set_speed_of_light(1.0)
+    test1 = FourVector.fourVel_from_spatialVel(vx = 0.1, vy=0.1, vz=0.1)
     print(f'Test: {test1}')
-    print(f'Magnitude: {abs(test1)}')
-    print(f'Speed of light: {C}')
+    print(f'Ans: {FourVector.LorentzFactor(0.98)}')
 
 if __name__ == '__main__':
     main()
